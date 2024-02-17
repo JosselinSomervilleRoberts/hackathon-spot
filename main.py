@@ -10,8 +10,8 @@ SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
 
 
 def say_something(text: str, file_name: str = "audio.mp3"):
-    myobj = gTTS(text=text, lang="en", slow=False)
-    myobj.save(file_name)
+    # myobj = gTTS(text=text, lang="en", slow=False)
+    # myobj.save(file_name)
     os.system(f"ffplay -nodisp -autoexit -loglevel quiet {file_name}")
 
 
@@ -23,7 +23,7 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
-    say_something("Finished downloading the model")
+    # say_something("Finished downloading the model")
 
     # Use wrapper in context manager to lease control, turn on E-Stop, power on the robot and stand up at start
     # and to return lease + sit down at the end
@@ -33,7 +33,7 @@ def main():
 
         time.sleep(2)
 
-        say_something("Let me see your face")
+        # say_something("Let me see your face")
         while True:
             # Read frame by frame
             _, frame = camera_capture.read()
@@ -46,6 +46,7 @@ def main():
             if len(faces) > 0:
                 print(f"Found {len(faces)} faces")
                 say_something("Hey babe")
+                break
 
         # # Move head to specified positions with intermediate time.sleep
         # spot.move_head_in_points(yaws=[0.2, 0],
