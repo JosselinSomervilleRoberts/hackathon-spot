@@ -1,8 +1,50 @@
 import os
 import time
-from spot_controller import SpotController
+
+# Attempt to import SpotController, set flag if not available
+try:
+    from spot_controller import SpotController
+
+    local_laptop = False
+except ImportError:
+    local_laptop = True
+print(f"Local laptop: {local_laptop}")
 from gtts import gTTS
 import cv2
+from typing import Callable, Any
+
+ROBOT_IP = "10.0.0.3"  # os.environ['ROBOT_IP']
+SPOT_USERNAME = "admin"  # os.environ['SPOT_USERNAME']
+SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
+
+
+# Wrapper class
+class SpotControllerWrapper:
+    def __init__(self, *args, **kwargs):
+        if not local_laptop:
+            self.spot = SpotController(*args, **kwargs)
+
+    def __getattr__(self, name):
+        """If local_laptop is True, replace SpotController methods with no-op.
+        Otherwise, return method from SpotController."""
+        if local_laptop:
+
+            def method(*args, **kwargs):
+                print(f"Skipping {name} due to local execution.")
+
+            return method
+        else:
+            return getattr(self.spot, name)
+
+    def __enter__(self):
+        if not local_laptop:
+            return self.spot.__enter__()
+        return self  # Return self to work with context manager syntax
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if not local_laptop:
+            return self.spot.__exit__(exc_type, exc_value, traceback)
+
 
 ROBOT_IP = "10.0.0.3"  # os.environ['ROBOT_IP']
 SPOT_USERNAME = "admin"  # os.environ['SPOT_USERNAME']
@@ -19,62 +61,103 @@ def say_something(text: str, file_name: str = "welcome.mp3"):
     os.system(f"ffplay -nodisp -autoexit -loglevel quiet temp_{file_name}")
 
 
+def nod_head(x: int, spot: SpotControllerWrapper):
+    # Nod head x times
+    for _ in range(x):
+        spot.move_head_in_points(
+            yaws=[0, 0], pitches=[0.3, 0], rolls=[0, 0], sleep_after_point_reached=0
+        )
+        spot.move_head_in_points(
+            yaws=[0, 0], pitches=[-0.3, 0], rolls=[0, 0], sleep_after_point_reached=0
+        )
+    spot.move_head_in_points(
+        yaws=[0, 0], pitches=[0, 0], rolls=[0, 0], sleep_after_point_reached=0
+    )
+
+
+def rotate_and_run_function(
+    spot: SpotControllerWrapper,
+    function: Callable[[SpotControllerWrapper, Any], int],
+    every_n_milliseconds: int,
+    rotation_speed: float,
+    n_rotations: int,
+    **kwargs,
+) -> int:
+    """Rotate the robot for n_rotations and run the function every_n_milliseconds
+
+    Args:
+        spot (SpotController): SpotController object
+        function (Callable[[SpotController, Any], int]): Function to run
+            This function should return 1 if the robot should stop
+        every_n_milliseconds (int): Run function every n milliseconds
+        rotation_speed (float): Rotation speed in rad/s
+        n_rotations (int): Number of rotations
+
+    Returns:
+        int: The result of the function
+    """
+    duration: int = n_rotations * 2 * 3.14 / rotation_speed
+    spot.move_by_velocity_control(
+        v_x=0, v_y=0, v_rot=rotation_speed, cmd_duration=duration
+    )
+    result: int = 0
+    start_time = time.time()
+    last_command_time_ms = start_time * 1000 - every_n_milliseconds
+    while time.time() - start_time < duration:
+        if (time.time() * 1000 - last_command_time_ms) >= every_n_milliseconds:
+            last_command_time_ms = time.time() * 1000
+            result: int = function(spot, **kwargs)
+            if result == 1:
+                break
+    spot.move_by_velocity_control(v_x=0, v_y=0, v_rot=0, cmd_duration=0)
+    return result
+
+
 def main():
     # Capture image
     camera_capture = cv2.VideoCapture(0)
 
-    say_something("Hi I am spot")
+    say_something("Booting up the robot")
     # Load the Haar Cascade for face detection
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
     say_something("Finished downloading the model")
 
+    def detect_faces(spot: SpotController, camera_capture: cv2.VideoCapture) -> int:
+        # Convert the frame to grayscale for the Haar Cascade detector
+        frame = camera_capture.read()[1]
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        # Detect faces
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        return len(faces) > 0
+
     # Use wrapper in context manager to lease control, turn on E-Stop, power on the robot and stand up at start
     # and to return lease + sit down at the end
     counter = 0
-    with SpotController(
+    with SpotControllerWrapper(
         username=SPOT_USERNAME, password=SPOT_PASSWORD, robot_ip=ROBOT_IP
     ) as spot:
+        # Start
+        nod_head(3, spot)
+        say_something("Hi, I am spot, can I help you with something?")
+
+        # Rotate and run function
+        success: int = rotate_and_run_function(
+            spot=spot,
+            function=detect_faces,
+            every_n_milliseconds=1000,
+            rotation_speed=0.3,
+            n_rotations=3,
+            camera_capture=camera_capture,
+        )
+        if success:
+            say_something("Oh, here you are! Can I help you with something?")
+            nod_head(3, spot)
+        else:
+            say_something("It seems like no one is here. I will lay down for now.")
 
         time.sleep(2)
-        spot.move_head_in_points(
-            yaws=[0.2, 0], pitches=[0.3, 0], rolls=[0.4, 0], sleep_after_point_reached=1
-        )
-
-        say_something("Let me see your face")
-        while True:
-            # Read frame by frame
-            _, frame = camera_capture.read()
-
-            # Convert the frame to grayscale for the Haar Cascade detector
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            # Detect faces
-            faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-
-            if len(faces) > 0:
-                print(f"Found {len(faces)} faces")
-                say_something("Hey babe, how are you doing today?")
-                counter += 1
-                if counter > 5:
-                    break
-                time.sleep(2)
-
-        # # Move head to specified positions with intermediate time.sleep
-        # spot.move_head_in_points(yaws=[0.2, 0],
-        #                          pitches=[0.3, 0],
-        #                          rolls=[0.4, 0],
-        #                          sleep_after_point_reached=1)
-        # time.sleep(3)
-
-        # # Make Spot to move by goal_x meters forward and goal_y meters left
-        # spot.move_to_goal(goal_x=0.5, goal_y=0)
-        # time.sleep(3)
-
-        # # Control Spot by velocity in m/s (or in rad/s for rotation)
-        # spot.move_by_velocity_control(v_x=-0.3, v_y=0, v_rot=0, cmd_duration=2)
-        # time.sleep(3)
-
     camera_capture.release()
 
 
