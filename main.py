@@ -38,6 +38,9 @@ def main():
     ) as spot:
 
         time.sleep(2)
+        spot.move_head_in_points(
+            yaws=[0.2, 0], pitches=[0.3, 0], rolls=[0.4, 0], sleep_after_point_reached=1
+        )
 
         say_something("Let me see your face")
         while True:
