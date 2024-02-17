@@ -14,10 +14,14 @@ def detect_faces(frame, face_cascade):
     return frame
 
 
-def say_something(text: str, file_name: str = "audio.mp3"):
+def say_something(text: str, file_name: str = "welcome.mp3"):
     myobj = gTTS(text=text, lang="en", slow=False)
     myobj.save(file_name)
-    os.system(f"ffplay -nodisp -autoexit -loglevel quiet {file_name}")
+    # Play loud audio
+    # Amplify audio
+    os.system(f"ffmpeg -i {file_name} -filter:a 'volume=10.0' temp_{file_name}")
+    # Play amplified audio
+    os.system(f"ffplay -nodisp -autoexit -loglevel quiet temp_{file_name}")
 
 
 def main():
