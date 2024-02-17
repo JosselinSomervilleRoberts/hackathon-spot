@@ -1,6 +1,7 @@
 import cv2
 from gtts import gTTS
 import os
+import time
 
 
 def detect_faces(frame, face_cascade):
@@ -19,7 +20,7 @@ def say_something(text: str, file_name: str = "welcome.mp3"):
     myobj.save(file_name)
     # Play loud audio
     # Amplify audio
-    os.system(f"ffmpeg -i {file_name} -filter:a 'volume=10.0' temp_{file_name}")
+    os.system(f"ffmpeg -i {file_name} -filter:a 'volume=10.0' temp_{file_name} -y")
     # Play amplified audio
     os.system(f"ffplay -nodisp -autoexit -loglevel quiet temp_{file_name}")
 
@@ -32,6 +33,7 @@ def main():
 
     # Start the webcam
     cap = cv2.VideoCapture(0)
+    counter = 0
 
     while True:
         # Read frame by frame
@@ -44,15 +46,14 @@ def main():
 
         if len(faces) > 0:
             print(f"Found {len(faces)} faces")
-            myobj = gTTS(text="Hey babe", lang="en", slow=False)
-
-            # Saving the converted audio in a mp3 file named
-            # welcome
-            myobj.save("welcome.mp3")
-
-            # Playing the converted file
-            os.system(f"ffplay -nodisp -autoexit -loglevel quiet welcome.mp3")
-            break
+            if counter == 0:
+                say_something("Hey babe, how are you doing today?")
+            elif counter == 1:
+                say_something("I am happy to see you again")
+            else:
+                break
+            counter += 1
+            time.sleep(5)
 
         # Break the loop when 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord("q"):

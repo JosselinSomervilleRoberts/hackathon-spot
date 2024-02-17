@@ -14,7 +14,7 @@ def say_something(text: str, file_name: str = "welcome.mp3"):
     myobj.save(file_name)
     # Play loud audio
     # Amplify audio
-    os.system(f"ffmpeg -i {file_name} -filter:a 'volume=2.0' temp_{file_name}")
+    os.system(f"ffmpeg -i {file_name} -filter:a 'volume=2.0' temp_{file_name} -y")
     # Play amplified audio
     os.system(f"ffplay -nodisp -autoexit -loglevel quiet temp_{file_name}")
 
