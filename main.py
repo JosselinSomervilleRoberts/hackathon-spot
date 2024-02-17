@@ -10,8 +10,8 @@ SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
 
 
 def say_something(text: str, file_name: str = "welcome.mp3"):
-    # myobj = gTTS(text=text, lang="en", slow=False)
-    # myobj.save(file_name)
+    myobj = gTTS(text=text, lang="en", slow=False)
+    myobj.save(file_name)
     os.system(f"ffplay -nodisp -autoexit -loglevel quiet {file_name}")
 
 
