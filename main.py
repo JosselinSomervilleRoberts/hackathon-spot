@@ -234,8 +234,8 @@ def main():
 
         # Ask for help
         start_time = time.time()
+        say_something("How can I help you today?")
         while time.time() - start_time < 60:
-            say_something("How can I help you today?")
             question: str = record_audio(audio_model)
             dict_output = process_question_attempts(
                 OBJ_CLASSES, question, num_attempts=2
