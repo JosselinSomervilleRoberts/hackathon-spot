@@ -52,6 +52,8 @@ SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
 
 
 def say_something(text: str, file_name: str = "welcome.mp3"):
+    print(f"Say something")
+    print(f"\t- Saying: {text}")
     myobj = gTTS(text=text, lang="en", slow=False)
     myobj.save(file_name)
     # Play loud audio
@@ -59,20 +61,27 @@ def say_something(text: str, file_name: str = "welcome.mp3"):
     os.system(f"ffmpeg -i {file_name} -filter:a 'volume=2.0' temp_{file_name} -y")
     # Play amplified audio
     os.system(f"ffplay -nodisp -autoexit -loglevel quiet temp_{file_name}")
+    print(f"\t- Done saying something")
 
 
 def nod_head(x: int, spot: SpotControllerWrapper):
+    print(f"Nodding head {x} times")
     # Nod head x times
     for _ in range(x):
+        print(f"\t- Moving head up")
         spot.move_head_in_points(
             yaws=[0, 0], pitches=[0.3, 0], rolls=[0, 0], sleep_after_point_reached=0
         )
+        print(f"\t- Moving head down")
         spot.move_head_in_points(
             yaws=[0, 0], pitches=[-0.3, 0], rolls=[0, 0], sleep_after_point_reached=0
         )
+    # Reset head position
+    print(f"\t- Resetting head position")
     spot.move_head_in_points(
         yaws=[0, 0], pitches=[0, 0], rolls=[0, 0], sleep_after_point_reached=0
     )
+    print(f"\t- Done nodding head")
 
 
 def rotate_and_run_function(
@@ -82,7 +91,7 @@ def rotate_and_run_function(
     rotation_speed: float,
     n_rotations: int,
     **kwargs,
-) -> int:
+) -> bool:
     """Rotate the robot for n_rotations and run the function every_n_milliseconds
 
     Args:
@@ -97,6 +106,9 @@ def rotate_and_run_function(
         int: The result of the function
     """
     duration: int = n_rotations * 2 * 3.14 / rotation_speed
+    print(f"Rotate and run function")
+    print(f"\t- Rotating for {n_rotations} rotations during {duration} seconds")
+    print(f"\t- Going to execute function every {every_n_milliseconds} milliseconds")
     spot.move_by_velocity_control(
         v_x=0, v_y=0, v_rot=rotation_speed, cmd_duration=duration
     )
@@ -108,9 +120,12 @@ def rotate_and_run_function(
             last_command_time_ms = time.time() * 1000
             result: int = function(spot, **kwargs)
             if result == 1:
+                print("\t- Function returned 1, stopping")
                 break
+    print("\t- Stopping")
     spot.move_by_velocity_control(v_x=0, v_y=0, v_rot=0, cmd_duration=0)
-    return result
+    print("\t- Done rotating and running function")
+    return result == 1
 
 
 def main():
@@ -124,7 +139,9 @@ def main():
     )
     say_something("Finished downloading the model")
 
-    def detect_faces(spot: SpotController, camera_capture: cv2.VideoCapture) -> int:
+    def detect_faces(
+        spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
+    ) -> int:
         # Convert the frame to grayscale for the Haar Cascade detector
         frame = camera_capture.read()[1]
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -143,12 +160,12 @@ def main():
         say_something("Hi, I am spot, can I help you with something?")
 
         # Rotate and run function
-        success: int = rotate_and_run_function(
+        success: bool = rotate_and_run_function(
             spot=spot,
             function=detect_faces,
             every_n_milliseconds=1000,
-            rotation_speed=0.3,
-            n_rotations=3,
+            rotation_speed=1.0,
+            n_rotations=2,
             camera_capture=camera_capture,
         )
         if success:
