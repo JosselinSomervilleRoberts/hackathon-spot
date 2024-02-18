@@ -53,6 +53,11 @@ class SpotControllerWrapper:
             return self.spot.__exit__(exc_type, exc_value, traceback)
 
 
+if local_laptop:
+    SpotClass = SpotControllerWrapper
+else:
+    SpotClass = SpotController
+
 ROBOT_IP = "10.0.0.3"  # os.environ['ROBOT_IP']
 SPOT_USERNAME = "admin"  # os.environ['SPOT_USERNAME']
 SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
@@ -165,8 +170,12 @@ def rotate_and_run_function(
 
 def record_audio(model, sample_name: str = "recording.wav", duration: int = 6) -> str:
     print("Recording audio")
-    # cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
-    cmd = f"arecord -vv --format=cd -r 48000 --duration={duration} -c 1 {sample_name}"
+    if local_laptop:
+        cmd = (
+            f"arecord -vv --format=cd -r 48000 --duration={duration} -c 1 {sample_name}"
+        )
+    else:
+        cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
     print(f"\t- Running command: {cmd}")
     os.system(cmd)
     print(f"\t- Done recording audio")
@@ -201,8 +210,7 @@ def main():
 
     # Use wrapper in context manager to lease control, turn on E-Stop, power on the robot and stand up at start
     # and to return lease + sit down at the end
-    counter = 0
-    with SpotControllerWrapper(
+    with SpotClass(
         username=SPOT_USERNAME, password=SPOT_PASSWORD, robot_ip=ROBOT_IP
     ) as spot:
         # Start
