@@ -59,6 +59,7 @@ SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
 
 
 def say_something(text: str, file_name: str = "welcome.mp3"):
+    return
     print(f"Say something")
     print(f"\t- Saying: {text}")
     myobj = gTTS(text=text, lang="en", slow=False)
@@ -162,10 +163,10 @@ def rotate_and_run_function(
     return result == 1
 
 
-def record_audio(model, sample_name: str = "recording.wav") -> str:
+def record_audio(model, sample_name: str = "recording.wav", duration: int = 6) -> str:
     print("Recording audio")
     # cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
-    cmd = f"arecord -vv --format=cd -r 48000 --duration=10 -c 1 {sample_name}"
+    cmd = f"arecord -vv --format=cd -r 48000 --duration={duration} -c 1 {sample_name}"
     print(f"\t- Running command: {cmd}")
     os.system(cmd)
     print(f"\t- Done recording audio")

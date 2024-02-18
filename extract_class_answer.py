@@ -13,7 +13,6 @@ if not openai_api_key:
 client = OpenAI(api_key=openai_api_key)
 
 # Define your prompt
-OBJ_CLASSES = ["PERSON", "BOAT", "CUP", "DOG", "CAT"]
 
 BASE_PROMPT = (
     "An elderly user will ask you a question, and you should answer"
@@ -81,12 +80,15 @@ def process_question_attempts(obj_classes, question, num_attempts):
             dict_output = process_question(obj_classes, question)
             break
         except Exception as e:
+            print(f"Error processing question: {e}")
             continue
 
     return dict_output
 
 
 if __name__ == "__main__":
+    from constants import OBJ_CLASSES
+
     question = "Can you help me find my tea?"
     dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
     print(dict_output)
