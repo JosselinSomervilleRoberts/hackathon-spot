@@ -1,10 +1,11 @@
 from openai import OpenAI
 import json
+import os
 
 # Load API keys from JSON file
 
 # Get OpenAI API key
-openai_api_key = "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"
+openai_api_key = os.environ.get("OPENAI_API_KEY")
 
 # Check if OpenAI API key exists
 if not openai_api_key:
@@ -36,13 +37,13 @@ EXAMPLES = (
     + "'object_class_to_find': ''}\n"
     + "User: Where can I find my tea? \n "
     + "Assistant: {'answer': 'Sure, let me find your tea. Wait a second.', "
-    + "'object_class_to_find': 'CUP'}\n"
+    + "'object_class_to_find': 'cup'}\n"
     + "Here in the user question.\n"
 )
 
 DEFAULT_DICT_OUTPUT = {
-    "answer": "I am sorry, but I did not understand your question... Could you please refrain it?",
-    "class": "",
+    "answer": "I am sorry, but I did not understand your question...",
+    "object_class_to_find": "",
 }
 
 
@@ -54,7 +55,7 @@ def create_prompt(obj_classes, question):
 def process_question(obj_classes, question):
     prompt = create_prompt(obj_classes, question)
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4-1106-preview",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -89,6 +90,6 @@ def process_question_attempts(obj_classes, question, num_attempts):
 if __name__ == "__main__":
     from constants import OBJ_CLASSES
 
-    question = "Can you help me find my tea?"
+    question = "Can you help me find my cup?"
     dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
     print(dict_output)
