@@ -3,12 +3,10 @@ import time
 from transformers import YolosImageProcessor, YolosForObjectDetection
 import torch
 from PIL import Image
-import requests
-from typing import String
-from .extract_class_answer import process_question_attempts
+from extract_class_answer import process_question_attempts
 import whisper
 
-from .constants import OBJ_CLASSES
+from constants import OBJ_CLASSES
 
 # Attempt to import SpotController, set flag if not available
 try:
@@ -92,10 +90,12 @@ def nod_head(x: int, spot: SpotControllerWrapper):
     )
     print(f"\t- Done nodding head")
 
-def detect_objects(spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture, obj_class: String):
-    model = YolosForObjectDetection.from_pretrained('hustvl/yolos-tiny')
-    image_processor = YolosImageProcessor.from_pretrained("hustvl/yolos-tiny")
 
+def detect_object(
+    spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture, obj_class: str
+):
+    model = YolosForObjectDetection.from_pretrained("hustvl/yolos-tiny")
+    image_processor = YolosImageProcessor.from_pretrained("hustvl/yolos-tiny")
 
     # infer on cpu
     model = model.cpu()
@@ -106,14 +106,15 @@ def detect_objects(spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
     inputs = image_processor(images=frame, return_tensors="pt")
     outputs = model(**inputs)
     target_sizes = torch.tensor([frame.size[::-1]])
-    results = image_processor.post_process_object_detection(outputs, threshold=0.8, target_sizes=target_sizes)[
-        0
-    ]
+    results = image_processor.post_process_object_detection(
+        outputs, threshold=0.8, target_sizes=target_sizes
+    )[0]
     labels = results["labels"]
     labels_text = set([model.config.id2label[label.item()] for label in labels])
     if obj_class in labels_text:
         return 1
     return 0
+
 
 def rotate_and_run_function(
     spot: SpotControllerWrapper,
@@ -163,7 +164,8 @@ def rotate_and_run_function(
 
 def record_audio(model, sample_name: str = "recording.wav") -> str:
     print("Recording audio")
-    cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
+    # cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
+    cmd = f"arecord -vv --format=cd -r 48000 --duration=10 -c 1 {sample_name}"
     print(f"\t- Running command: {cmd}")
     os.system(cmd)
     print(f"\t- Done recording audio")
@@ -197,7 +199,7 @@ def main():
     # Use wrapper in context manager to lease control, turn on E-Stop, power on the robot and stand up at start
     # and to return lease + sit down at the end
     counter = 0
-    with SpotController(
+    with SpotControllerWrapper(
         username=SPOT_USERNAME, password=SPOT_PASSWORD, robot_ip=ROBOT_IP
     ) as spot:
         # Start
