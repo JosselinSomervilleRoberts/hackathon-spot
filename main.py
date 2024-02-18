@@ -209,7 +209,7 @@ def main():
             spot=spot,
             function=detect_faces,
             every_n_milliseconds=100,
-            rotation_speed=0.9,
+            rotation_speed=-0.9,
             n_rotations=2,
             camera_capture=camera_capture,
         )
@@ -241,7 +241,7 @@ def main():
                     spot=spot,
                     function=detect_object,
                     every_n_milliseconds=100,
-                    rotation_speed=0.9,
+                    rotation_speed=0.25,
                     n_rotations=2,
                     camera_capture=camera_capture,
                     obj_class=class_,
