@@ -164,7 +164,7 @@ def main():
             spot=spot,
             function=detect_faces,
             every_n_milliseconds=1000,
-            rotation_speed=1.0,
+            rotation_speed=0.5,
             n_rotations=2,
             camera_capture=camera_capture,
         )
