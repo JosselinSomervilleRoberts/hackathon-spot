@@ -1,10 +1,8 @@
 import os
 import time
-from extract_class_answer import (
-    process_question_attempts,
-    speech_to_text,
-    find_object_in_image,
-)
+from extract_class_answer import process_question_attempts
+from openai_client import OpenAIClient, speech_to_text, find_object_in_image
+from together_client import TogetherClient
 
 from constants import OBJ_CLASSES
 
@@ -186,6 +184,13 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
+    client = TogetherClient(
+        model_name="mistralai/Mistral-7B-Instruct-v0.2",
+        api_key=os.environ.get("TOGETHER_API_KEY"),
+    )
+    client = OpenAIClient(
+        model_name="gpt-4-1106-preview", api_key=os.environ.get("OPENAI_API_KEY")
+    )
 
     def detect_faces(
         spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
@@ -227,7 +232,7 @@ def main():
         while time.time() - start_time < 60:
             question: str = record_audio()
             dict_output = process_question_attempts(
-                OBJ_CLASSES, question, num_attempts=2
+                OBJ_CLASSES, question, num_attempts=2, client=client
             )
             say_something(dict_output["answer"])
 

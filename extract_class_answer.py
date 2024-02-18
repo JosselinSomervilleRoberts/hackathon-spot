@@ -1,23 +1,8 @@
-from openai import OpenAI
+from typing import List, Dict
+from client import Client
 import json
-import os
-import cv2
-import base64
-import requests
-
-# Load API keys from JSON file
-
-# Get OpenAI API key
-openai_api_key = os.environ.get("OPENAI_API_KEY")
-
-# Check if OpenAI API key exists
-if not openai_api_key:
-    raise ValueError("OpenAI API key not found in api_keys.json")
-
-client = OpenAI(api_key=openai_api_key)
 
 # Define your prompt
-
 BASE_PROMPT = (
     "An elderly user will ask you a question, and you should answer"
     + "in a useful and harmless way in a very precise JSON format. Additionally, if"
@@ -55,20 +40,11 @@ def create_prompt(obj_classes, question):
     return prompt
 
 
-def process_question(obj_classes, question):
+def process_question(
+    obj_classes: List[str], question: str, client: Client
+) -> Dict[str, str]:
     prompt = create_prompt(obj_classes, question)
-    response = client.chat.completions.create(
-        model="gpt-4-1106-preview",
-        response_format={"type": "json_object"},
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {
-                "role": "user",
-                "content": prompt,
-            },
-        ],
-    )
-    output = response.choices[0].message.content
+    output = client.make_request(prompt)
     dict_output = json.loads(output)
     assert "answer" in dict_output.keys()
     assert "object_class_to_find" in dict_output.keys()
@@ -77,11 +53,11 @@ def process_question(obj_classes, question):
     return dict_output
 
 
-def process_question_attempts(obj_classes, question, num_attempts):
+def process_question_attempts(obj_classes, question, client: Client, num_attempts=2):
     dict_output = DEFAULT_DICT_OUTPUT
     for _ in range(num_attempts):
         try:
-            dict_output = process_question(obj_classes, question)
+            dict_output = process_question(obj_classes, question, client)
             break
         except Exception as e:
             print(f"Error processing question: {e}")
@@ -96,60 +72,3 @@ if __name__ == "__main__":
     question = "Can you help me find my cup?"
     dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
     print(dict_output)
-
-
-def speech_to_text(file_name: str) -> str:
-    """
-    Transcribe an audio file to text using the Google Cloud Speech-to-Text API.
-    Args:
-        file_name (str): The name of the audio file to transcribe.
-    Returns
-        str: The transcribed text.
-    """
-    audio_file = open(file_name, "rb")
-    transcript = client.audio.transcriptions.create(
-        model="whisper-1", file=audio_file, language="en", response_format="text"
-    )
-    return transcript
-
-
-def find_object_in_image(image, obj_class: str) -> bool:
-    print("find_object_in_image")
-    print(f"\t- Looking for a {obj_class} in the image...")
-    # Encode it with compressing this time
-    base64_image = base64.b64encode(
-        cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 20])[1]
-    ).decode("utf-8")
-    print(f"\t- Sized of base64_image: {len(base64_image)}")
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {openai_api_key}",
-    }
-
-    payload = {
-        "model": "gpt-4-vision-preview",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": f"Is there a {obj_class} in this image? Answer by a singler word: yes or no only.",
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-                    },
-                ],
-            }
-        ],
-        "max_tokens": 2,
-    }
-
-    response = requests.post(
-        "https://api.openai.com/v1/chat/completions", headers=headers, json=payload
-    )
-    rep = response.json()["choices"][0]["message"]["content"]
-    print(f"\t- GPT-4 Vision response: {rep}")
-    return "yes" in rep.lower()

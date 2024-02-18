@@ -1,4 +1,5 @@
-from typing import Dict, Optional
+from typing import Dict
+from client import Client
 
 import requests
 
@@ -7,7 +8,7 @@ class TogetherClientError(Exception):
     pass
 
 
-class TogetherClient:
+class TogetherClient(Client):
     """
     Client for the models where we evaluate offline. Since the queries are handled offline, the `TogetherClient` just
     checks if the request/result is cached. We return the result if it's in the cache. Otherwise, we return an error.
@@ -15,13 +16,9 @@ class TogetherClient:
 
     INFERENCE_ENDPOINT: str = "https://api.together.xyz/api/inference"
 
-    def __init__(
-        self,
-        together_model: Optional[str] = None,
-        api_key: Optional[str] = None,
-    ):
-        self.api_key: Optional[str] = api_key
-        self.together_model = together_model
+    def __init__(self, model_name: str, api_key: str):
+        self.api_key: str = api_key
+        self.model_name = model_name
 
     def _get_job_url(self, job_id: str) -> str:
         return f"https://api.together.xyz/jobs/job/{job_id}"
@@ -29,7 +26,7 @@ class TogetherClient:
     def make_request(self, prompt: str):
         raw_request = {
             "request_type": "language-model-inference",
-            "model": self.together_model,
+            "model": self.model_name,
             "prompt": prompt,
         }
 
