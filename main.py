@@ -101,7 +101,8 @@ def detect_object(
     camera_capture: cv2.VideoCapture,
     obj_class: str,
 ):
-    frame = camera_capture.read()[1]
+    for _ in range(10):
+        frame = camera_capture.read()[1]
     return 1 if find_object_in_image(frame, obj_class) else 0
 
 
@@ -138,7 +139,7 @@ def rotate_and_run_function(
             v_x=0,
             v_y=0,
             v_rot=rotation_speed,
-            cmd_duration=every_n_milliseconds / 1000.0,
+            cmd_duration=2,
         )
         if (time.time() * 1000 - last_command_time_ms) >= every_n_milliseconds:
             last_command_time_ms = time.time() * 1000
@@ -147,6 +148,12 @@ def rotate_and_run_function(
                 print("\t- Function returned 1, stopping")
                 break
     print("\t- Stopping")
+    spot.move_by_velocity_control(
+        v_x=0,
+        v_y=0,
+        v_rot=0,
+        cmd_duration=0.1,
+    )
     print("\t- Done rotating and running function")
     return result == 1
 
