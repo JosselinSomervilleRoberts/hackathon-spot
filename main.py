@@ -1,6 +1,10 @@
 import os
 import time
-
+from transformers import YolosImageProcessor, YolosForObjectDetection
+import torch
+from PIL import Image
+import requests
+from typing import String
 # Attempt to import SpotController, set flag if not available
 try:
     from spot_controller import SpotController
@@ -83,6 +87,28 @@ def nod_head(x: int, spot: SpotControllerWrapper):
     )
     print(f"\t- Done nodding head")
 
+def detect_objects(spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture, obj_class: String):
+    model = YolosForObjectDetection.from_pretrained('hustvl/yolos-tiny')
+    image_processor = YolosImageProcessor.from_pretrained("hustvl/yolos-tiny")
+
+
+    # infer on cpu
+    model = model.cpu()
+    image_processor = image_processor
+    frame = camera_capture.read()[1]
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = Image.fromarray(frame)
+    inputs = image_processor(images=frame, return_tensors="pt")
+    outputs = model(**inputs)
+    target_sizes = torch.tensor([frame.size[::-1]])
+    results = image_processor.post_process_object_detection(outputs, threshold=0.8, target_sizes=target_sizes)[
+        0
+    ]
+    labels = results["labels"]
+    labels_text = set([model.config.id2label[label.item()] for label in labels])
+    if obj_class in labels_text:
+        return 1
+    return 0
 
 def rotate_and_run_function(
     spot: SpotControllerWrapper,
