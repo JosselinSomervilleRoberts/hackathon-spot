@@ -15,6 +15,7 @@ RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM"
 
 COPY requirements.txt requirements.txt
 RUN python3.8 -m pip install -r requirements.txt
+RUN python3.8 -m pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu117
 COPY . .
 
 CMD ["python3.8", "main.py"]
