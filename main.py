@@ -82,7 +82,7 @@ def nod_head(x: int, spot: SpotControllerWrapper):
     for _ in range(x):
         print(f"\t- Moving head up")
         spot.move_head_in_points(
-            yaws=[0, 0], pitches=[0.1, 0], rolls=[0, 0], sleep_after_point_reached=0
+            yaws=[0, 0], pitches=[0.18, 0], rolls=[0, 0], sleep_after_point_reached=0
         )
         print(f"\t- Moving head down")
         spot.move_head_in_points(
@@ -134,6 +134,7 @@ def rotate_and_run_function(
     result: int = 0
     start_time = time.time()
     last_command_time_ms = start_time * 1000 - every_n_milliseconds
+    delay = 0
     while time.time() - start_time < duration:
         spot.move_by_velocity_control(
             v_x=0,
@@ -141,11 +142,13 @@ def rotate_and_run_function(
             v_rot=rotation_speed,
             cmd_duration=2,
         )
+        start_exec_time = time.time()
         if (time.time() * 1000 - last_command_time_ms) >= every_n_milliseconds:
             last_command_time_ms = time.time() * 1000
             result: int = function(spot, **kwargs)
             if result == 1:
                 print("\t- Function returned 1, stopping")
+                delay = time.time() - start_exec_time
                 break
     print("\t- Stopping")
     spot.move_by_velocity_control(
@@ -155,7 +158,7 @@ def rotate_and_run_function(
         cmd_duration=0.1,
     )
     print("\t- Done rotating and running function")
-    return result == 1
+    return result == 1, delay
 
 
 def record_audio(sample_name: str = "recording.wav", duration: int = 6) -> str:
@@ -202,10 +205,10 @@ def main():
     ) as spot:
         # Start
         nod_head(1, spot)
-        say_something("Hi, I am spot")
+        say_something("Hi, I am spot, where are you?")
 
         # Rotate and run function
-        success: bool = rotate_and_run_function(
+        success, delay = rotate_and_run_function(
             spot=spot,
             function=detect_faces,
             every_n_milliseconds=200,
@@ -237,17 +240,26 @@ def main():
                 say_something(f"Let me find your {class_}.")
 
                 # Look for the object
-                success: bool = rotate_and_run_function(
+                ROTATION_SPEED = 0.15
+                success, delay = rotate_and_run_function(
                     spot=spot,
                     function=detect_object,
-                    every_n_milliseconds=100,
-                    rotation_speed=0.25,
+                    every_n_milliseconds=200,
+                    rotation_speed=ROTATION_SPEED,
                     n_rotations=2,
                     camera_capture=camera_capture,
                     obj_class=class_,
                 )
 
                 if success:
+                    spot.move_by_velocity_control(
+                        v_x=0,
+                        v_y=0,
+                        v_rot=-ROTATION_SPEED,
+                        cmd_duration=delay,
+                    )
+                    spot.move_to_goal(goal_x=0.25, goal_y=0)
+                    time.sleep(1)
                     say_something(f"Here is your {class_}. Look at where I am nodding.")
                     nod_head(3, spot)
                     break
