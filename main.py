@@ -214,7 +214,7 @@ def main():
         username=SPOT_USERNAME, password=SPOT_PASSWORD, robot_ip=ROBOT_IP
     ) as spot:
         # Start
-        nod_head(3, spot)
+        nod_head(1, spot)
         say_something("Hi, I am spot")
 
         # Rotate and run function
@@ -228,13 +228,13 @@ def main():
         )
         if success:
             say_something("Oh, here you are!")
-            nod_head(3, spot)
         else:
             say_something("It seems like no one is here. I will lay down for now.")
         time.sleep(1)
 
         # Ask for help
-        while True:
+        start_time = time.time()
+        while time.time() - start_time < 60:
             say_something("How can I help you today?")
             question: str = record_audio(audio_model)
             dict_output = process_question_attempts(
