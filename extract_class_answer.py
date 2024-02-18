@@ -114,13 +114,18 @@ def speech_to_text(file_name: str) -> str:
 
 
 def find_object_in_image(image, obj_class: str) -> bool:
-    base64_image = base64.b64encode(cv2.imencode(".jpg", image)[1]).decode("utf-8")
+    print("find_object_in_image")
+    print(f"\t- Looking for a {obj_class} in the image...")
+    # Encode it with compressing this time
+    base64_image = base64.b64encode(
+        cv2.imencode(".jpg", image, [cv2.IMWRITE_JPEG_QUALITY, 20])[1]
+    ).decode("utf-8")
+    print(f"\t- Sized of base64_image: {len(base64_image)}")
+
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {openai_api_key}",
     }
-    print("find_object_in_image")
-    print(f"\t- Looking for a {obj_class} in the image...")
 
     payload = {
         "model": "gpt-4-vision-preview",

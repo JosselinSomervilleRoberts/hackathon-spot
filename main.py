@@ -165,7 +165,7 @@ def record_audio(sample_name: str = "recording.wav", duration: int = 6) -> str:
             f"arecord -vv --format=cd -r 48000 --duration={duration} -c 1 {sample_name}"
         )
     else:
-        cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
+        cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration={duration} -c 1 {sample_name}'
     print(f"\t- Running command: {cmd}")
     os.system(cmd)
     print(f"\t- Done recording audio")
