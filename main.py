@@ -5,6 +5,10 @@ import torch
 from PIL import Image
 import requests
 from typing import String
+from .extract_class_answer import process_question_attempts
+
+from .constants import OBJ_CLASSES
+
 # Attempt to import SpotController, set flag if not available
 try:
     from spot_controller import SpotController
@@ -191,9 +195,9 @@ def main():
         success: bool = rotate_and_run_function(
             spot=spot,
             function=detect_faces,
-            every_n_milliseconds=1000,
-            rotation_speed=0.7,
-            n_rotations=1,
+            every_n_milliseconds=500,
+            rotation_speed=0.9,
+            n_rotations=2,
             camera_capture=camera_capture,
         )
         if success:
@@ -201,8 +205,37 @@ def main():
             nod_head(3, spot)
         else:
             say_something("It seems like no one is here. I will lay down for now.")
+        time.sleep(1)
 
-        time.sleep(2)
+        # Ask for help
+        question: str
+        dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
+        say_something(dict_output["answer"])
+
+        if (
+            dict_output["object_class_to_find"] is not None
+            and dict_output["object_class_to_find"] != ""
+        ):
+            class_: str = dict_output["object_class_to_find"]
+            say_something(f"Let me find your {class_}.")
+
+            # Look for the object
+            success: bool = rotate_and_run_function(
+                spot=spot,
+                function=detect_object,
+                every_n_milliseconds=500,
+                rotation_speed=0.9,
+                n_rotations=2,
+                camera_capture=camera_capture,
+                obj_class=class_,
+            )
+
+            if success:
+                say_something(f"Here is your {class_}. Look at where I am nodding.")
+                nod_head(3, spot)
+            else:
+                say_something(f"I am sorry, but I could not find your {class_}.")
+
     camera_capture.release()
 
 
