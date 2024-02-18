@@ -3,11 +3,10 @@ import time
 from transformers import YolosImageProcessor, YolosForObjectDetection
 import torch
 from PIL import Image
-import requests
-from typing import String
-from .extract_class_answer import process_question_attempts
+from extract_class_answer import process_question_attempts, speech_to_text
+import whisper
 
-from .constants import OBJ_CLASSES
+from constants import OBJ_CLASSES
 
 # Attempt to import SpotController, set flag if not available
 try:
@@ -54,6 +53,11 @@ class SpotControllerWrapper:
             return self.spot.__exit__(exc_type, exc_value, traceback)
 
 
+if local_laptop:
+    SpotClass = SpotControllerWrapper
+else:
+    SpotClass = SpotController
+
 ROBOT_IP = "10.0.0.3"  # os.environ['ROBOT_IP']
 SPOT_USERNAME = "admin"  # os.environ['SPOT_USERNAME']
 SPOT_PASSWORD = "2zqa8dgw7lor"  # os.environ['SPOT_PASSWORD']
@@ -91,11 +95,14 @@ def nod_head(x: int, spot: SpotControllerWrapper):
     )
     print(f"\t- Done nodding head")
 
-def detect_objects(spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture, obj_class: String):
-    model = YolosForObjectDetection.from_pretrained('hustvl/yolos-tiny')
-    image_processor = YolosImageProcessor.from_pretrained("hustvl/yolos-tiny")
 
-
+def detect_object(
+    spot: SpotControllerWrapper,
+    camera_capture: cv2.VideoCapture,
+    obj_class: str,
+    model,
+    image_processor,
+):
     # infer on cpu
     model = model.cpu()
     image_processor = image_processor
@@ -105,14 +112,15 @@ def detect_objects(spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
     inputs = image_processor(images=frame, return_tensors="pt")
     outputs = model(**inputs)
     target_sizes = torch.tensor([frame.size[::-1]])
-    results = image_processor.post_process_object_detection(outputs, threshold=0.8, target_sizes=target_sizes)[
-        0
-    ]
+    results = image_processor.post_process_object_detection(
+        outputs, threshold=0.5, target_sizes=target_sizes
+    )[0]
     labels = results["labels"]
     labels_text = set([model.config.id2label[label.item()] for label in labels])
     if obj_class in labels_text:
         return 1
     return 0
+
 
 def rotate_and_run_function(
     spot: SpotControllerWrapper,
@@ -160,6 +168,22 @@ def rotate_and_run_function(
     return result == 1
 
 
+def record_audio(sample_name: str = "recording.wav", duration: int = 6) -> str:
+    print("Recording audio")
+    if local_laptop:
+        cmd = (
+            f"arecord -vv --format=cd -r 48000 --duration={duration} -c 1 {sample_name}"
+        )
+    else:
+        cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
+    print(f"\t- Running command: {cmd}")
+    os.system(cmd)
+    print(f"\t- Done recording audio")
+    result = speech_to_text(sample_name)
+    print(f"\t- Transcribed audio: {result}")
+    return result
+
+
 def main():
     # Capture image
     camera_capture = cv2.VideoCapture(0)
@@ -169,7 +193,9 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
-    say_something("Finished downloading the model")
+    image_model = YolosForObjectDetection.from_pretrained("hustvl/yolos-tiny")
+    image_processor = YolosImageProcessor.from_pretrained("hustvl/yolos-tiny")
+    say_something("Finished downloading all models")
 
     def detect_faces(
         spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
@@ -183,13 +209,12 @@ def main():
 
     # Use wrapper in context manager to lease control, turn on E-Stop, power on the robot and stand up at start
     # and to return lease + sit down at the end
-    counter = 0
-    with SpotController(
+    with SpotClass(
         username=SPOT_USERNAME, password=SPOT_PASSWORD, robot_ip=ROBOT_IP
     ) as spot:
         # Start
-        nod_head(3, spot)
-        say_something("Hi, I am spot, can I help you with something?")
+        nod_head(1, spot)
+        say_something("Hi, I am spot")
 
         # Rotate and run function
         success: bool = rotate_and_run_function(
@@ -201,40 +226,49 @@ def main():
             camera_capture=camera_capture,
         )
         if success:
-            say_something("Oh, here you are! Can I help you with something?")
-            nod_head(3, spot)
+            say_something("Oh, here you are!")
         else:
             say_something("It seems like no one is here. I will lay down for now.")
         time.sleep(1)
 
         # Ask for help
-        question: str
-        dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
-        say_something(dict_output["answer"])
-
-        if (
-            dict_output["object_class_to_find"] is not None
-            and dict_output["object_class_to_find"] != ""
-        ):
-            class_: str = dict_output["object_class_to_find"]
-            say_something(f"Let me find your {class_}.")
-
-            # Look for the object
-            success: bool = rotate_and_run_function(
-                spot=spot,
-                function=detect_object,
-                every_n_milliseconds=500,
-                rotation_speed=0.9,
-                n_rotations=2,
-                camera_capture=camera_capture,
-                obj_class=class_,
+        start_time = time.time()
+        say_something("How can I help you today?")
+        while time.time() - start_time < 60:
+            question: str = record_audio()
+            dict_output = process_question_attempts(
+                OBJ_CLASSES, question, num_attempts=2
             )
+            say_something(dict_output["answer"])
 
-            if success:
-                say_something(f"Here is your {class_}. Look at where I am nodding.")
-                nod_head(3, spot)
+            if (
+                dict_output.get("object_class_to_find", None) is not None
+                and dict_output["object_class_to_find"] != ""
+            ):
+                class_: str = dict_output["object_class_to_find"]
+                say_something(f"Let me find your {class_}.")
+
+                # Look for the object
+                success: bool = rotate_and_run_function(
+                    spot=spot,
+                    function=detect_object,
+                    every_n_milliseconds=500,
+                    rotation_speed=0.9,
+                    n_rotations=2,
+                    camera_capture=camera_capture,
+                    obj_class=class_,
+                    model=image_model,
+                    image_processor=image_processor,
+                )
+
+                if success:
+                    say_something(f"Here is your {class_}. Look at where I am nodding.")
+                    nod_head(3, spot)
+                    break
+                else:
+                    say_something(f"I am sorry, but I could not find your {class_}.")
             else:
-                say_something(f"I am sorry, but I could not find your {class_}.")
+                say_something("Can you please rephrase your question?")
 
     camera_capture.release()
 

@@ -1,10 +1,11 @@
 from openai import OpenAI
 import json
+import os
 
 # Load API keys from JSON file
 
 # Get OpenAI API key
-openai_api_key = "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"
+openai_api_key = os.environ.get("OPENAI_API_KEY")
 
 # Check if OpenAI API key exists
 if not openai_api_key:
@@ -13,7 +14,6 @@ if not openai_api_key:
 client = OpenAI(api_key=openai_api_key)
 
 # Define your prompt
-OBJ_CLASSES = ["PERSON", "BOAT", "CUP", "DOG", "CAT"]
 
 BASE_PROMPT = (
     "An elderly user will ask you a question, and you should answer"
@@ -37,13 +37,13 @@ EXAMPLES = (
     + "'object_class_to_find': ''}\n"
     + "User: Where can I find my tea? \n "
     + "Assistant: {'answer': 'Sure, let me find your tea. Wait a second.', "
-    + "'object_class_to_find': 'CUP'}\n"
+    + "'object_class_to_find': 'cup'}\n"
     + "Here in the user question.\n"
 )
 
 DEFAULT_DICT_OUTPUT = {
-    "answer": "I am sorry, but I did not understand your question... Could you please refrain it?",
-    "class": "",
+    "answer": "I am sorry, but I did not understand your question...",
+    "object_class_to_find": "",
 }
 
 
@@ -55,7 +55,7 @@ def create_prompt(obj_classes, question):
 def process_question(obj_classes, question):
     prompt = create_prompt(obj_classes, question)
     response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+        model="gpt-4-1106-preview",
         response_format={"type": "json_object"},
         messages=[
             {"role": "system", "content": "You are a helpful assistant."},
@@ -81,12 +81,30 @@ def process_question_attempts(obj_classes, question, num_attempts):
             dict_output = process_question(obj_classes, question)
             break
         except Exception as e:
+            print(f"Error processing question: {e}")
             continue
 
     return dict_output
 
 
 if __name__ == "__main__":
-    question = "Can you help me find my tea?"
+    from constants import OBJ_CLASSES
+
+    question = "Can you help me find my cup?"
     dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
     print(dict_output)
+
+
+def speech_to_text(file_name: str) -> str:
+    """
+    Transcribe an audio file to text using the Google Cloud Speech-to-Text API.
+    Args:
+        file_name (str): The name of the audio file to transcribe.
+    Returns
+        str: The transcribed text.
+    """
+    audio_file = open(file_name, "rb")
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1", file=audio_file, language="en", response_format="text"
+    )
+    return transcript
