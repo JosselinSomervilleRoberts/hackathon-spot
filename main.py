@@ -70,11 +70,11 @@ def nod_head(x: int, spot: SpotControllerWrapper):
     for _ in range(x):
         print(f"\t- Moving head up")
         spot.move_head_in_points(
-            yaws=[0, 0], pitches=[0.3, 0], rolls=[0, 0], sleep_after_point_reached=0
+            yaws=[0, 0], pitches=[0.1, 0], rolls=[0, 0], sleep_after_point_reached=0
         )
         print(f"\t- Moving head down")
         spot.move_head_in_points(
-            yaws=[0, 0], pitches=[-0.3, 0], rolls=[0, 0], sleep_after_point_reached=0
+            yaws=[0, 0], pitches=[-0.1, 0], rolls=[0, 0], sleep_after_point_reached=0
         )
     # Reset head position
     print(f"\t- Resetting head position")
@@ -164,8 +164,8 @@ def main():
             spot=spot,
             function=detect_faces,
             every_n_milliseconds=1000,
-            rotation_speed=0.5,
-            n_rotations=2,
+            rotation_speed=0.7,
+            n_rotations=1,
             camera_capture=camera_capture,
         )
         if success:
