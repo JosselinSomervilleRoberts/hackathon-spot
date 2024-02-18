@@ -44,7 +44,9 @@ def process_question(
     obj_classes: List[str], question: str, client: Client
 ) -> Dict[str, str]:
     prompt = create_prompt(obj_classes, question)
-    output = client.make_request(prompt)
+    output, error = client.make_request(prompt)
+    if error is not None:
+        raise Exception(f"Error processing question: {error}")
     dict_output = json.loads(output)
     assert "answer" in dict_output.keys()
     assert "object_class_to_find" in dict_output.keys()

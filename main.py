@@ -184,10 +184,10 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
-    client = TogetherClient(
-        model_name="mistralai/Mistral-7B-Instruct-v0.2",
-        api_key=os.environ.get("TOGETHER_API_KEY"),
-    )
+    # client = TogetherClient(
+    #     model_name="mistralai/Mistral-7B-Instruct-v0.2",
+    #     api_key=os.environ.get("TOGETHER_API_KEY"),
+    # )
     client = OpenAIClient(
         model_name="gpt-4-1106-preview", api_key=os.environ.get("OPENAI_API_KEY")
     )
@@ -209,7 +209,7 @@ def main():
     ) as spot:
         # Start
         nod_head(1, spot)
-        say_something("Hi, I am spot, how are you doing Joss today? Where are you?")
+        say_something("Hi, I am spot, how are you doing today? Where are you?")
 
         # Rotate and run function
         success, delay = rotate_and_run_function(
