@@ -161,7 +161,7 @@ def rotate_and_run_function(
     return result == 1, delay
 
 
-def record_audio(sample_name: str = "recording.wav", duration: int = 6) -> str:
+def record_audio(sample_name: str = "recording.wav", duration: int = 7) -> str:
     print("Recording audio")
     if local_laptop:
         cmd = (
@@ -186,7 +186,6 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
-    say_something("Finished downloading all models")
 
     def detect_faces(
         spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
@@ -205,7 +204,7 @@ def main():
     ) as spot:
         # Start
         nod_head(1, spot)
-        say_something("Hi, I am spot, where are you?")
+        say_something("Hi, I am spot, how are you doing Joss today? Where are you?")
 
         # Rotate and run function
         success, delay = rotate_and_run_function(
@@ -217,7 +216,7 @@ def main():
             camera_capture=camera_capture,
         )
         if success:
-            say_something("Oh, here you are!")
+            say_something("Oh, here you are, it's nice to see you!")
         else:
             say_something("It seems like no one is here. I will lay down for now.")
         time.sleep(1)
@@ -261,12 +260,15 @@ def main():
                     spot.move_to_goal(goal_x=0.25, goal_y=0)
                     time.sleep(1)
                     say_something(f"Here is your {class_}. Look at where I am nodding.")
-                    nod_head(3, spot)
+                    nod_head(2, spot)
+                    say_something(
+                        f"Be careful, it might be hot! Let me know if you need anything else."
+                    )
                     break
                 else:
                     say_something(f"I am sorry, but I could not find your {class_}.")
             else:
-                say_something("Can you please rephrase your question?")
+                pass  # say_something("Can you please rephrase your question?")
 
     camera_capture.release()
 
