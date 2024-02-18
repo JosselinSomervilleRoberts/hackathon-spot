@@ -127,7 +127,7 @@ def rotate_and_run_function(
     Returns:
         int: The result of the function
     """
-    duration: int = n_rotations * 2 * 3.14 / rotation_speed
+    duration: int = n_rotations * 2 * 3.14 / abs(rotation_speed)
     print(f"Rotate and run function")
     print(f"\t- Rotating for {n_rotations} rotations during {duration} seconds")
     print(f"\t- Going to execute function every {every_n_milliseconds} milliseconds")
@@ -208,8 +208,8 @@ def main():
         success: bool = rotate_and_run_function(
             spot=spot,
             function=detect_faces,
-            every_n_milliseconds=100,
-            rotation_speed=-0.9,
+            every_n_milliseconds=200,
+            rotation_speed=-0.5,
             n_rotations=2,
             camera_capture=camera_capture,
         )
