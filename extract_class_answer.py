@@ -93,3 +93,18 @@ if __name__ == "__main__":
     question = "Can you help me find my cup?"
     dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
     print(dict_output)
+
+
+def speech_to_text(file_name: str) -> str:
+    """
+    Transcribe an audio file to text using the Google Cloud Speech-to-Text API.
+    Args:
+        file_name (str): The name of the audio file to transcribe.
+    Returns
+        str: The transcribed text.
+    """
+    audio_file = open(file_name, "rb")
+    transcript = client.audio.transcriptions.create(
+        model="whisper-1", file=audio_file, language="en", response_format="text"
+    )
+    return transcript

@@ -3,7 +3,7 @@ import time
 from transformers import YolosImageProcessor, YolosForObjectDetection
 import torch
 from PIL import Image
-from extract_class_answer import process_question_attempts
+from extract_class_answer import process_question_attempts, speech_to_text
 import whisper
 
 from constants import OBJ_CLASSES
@@ -168,7 +168,7 @@ def rotate_and_run_function(
     return result == 1
 
 
-def record_audio(model, sample_name: str = "recording.wav", duration: int = 6) -> str:
+def record_audio(sample_name: str = "recording.wav", duration: int = 6) -> str:
     print("Recording audio")
     if local_laptop:
         cmd = (
@@ -179,9 +179,9 @@ def record_audio(model, sample_name: str = "recording.wav", duration: int = 6) -
     print(f"\t- Running command: {cmd}")
     os.system(cmd)
     print(f"\t- Done recording audio")
-    result = model.transcribe(sample_name)
+    result = speech_to_text(sample_name)
     print(f"\t- Transcribed audio: {result}")
-    return result["text"]
+    return result
 
 
 def main():
@@ -193,7 +193,6 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
-    audio_model = whisper.load_model("base")
     image_model = YolosForObjectDetection.from_pretrained("hustvl/yolos-tiny")
     image_processor = YolosImageProcessor.from_pretrained("hustvl/yolos-tiny")
     say_something("Finished downloading all models")
@@ -236,7 +235,7 @@ def main():
         start_time = time.time()
         say_something("How can I help you today?")
         while time.time() - start_time < 60:
-            question: str = record_audio(audio_model)
+            question: str = record_audio()
             dict_output = process_question_attempts(
                 OBJ_CLASSES, question, num_attempts=2
             )
