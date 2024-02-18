@@ -1,6 +1,7 @@
 import os
 import time
 from .extract_class_answer import process_question_attempts
+import whisper
 
 from .constants import OBJ_CLASSES
 
@@ -133,6 +134,17 @@ def rotate_and_run_function(
     return result == 1
 
 
+def record_audio(model, sample_name: str = "recording.wav") -> str:
+    print("Recording audio")
+    cmd = f'arecord -vv --format=cd --device={os.environ["AUDIO_INPUT_DEVICE"]} -r 48000 --duration=10 -c 1 {sample_name}'
+    print(f"\t- Running command: {cmd}")
+    os.system(cmd)
+    print(f"\t- Done recording audio")
+    result = model.transcribe(sample_name)
+    print(f"\t- Transcribed audio: {result}")
+    return result["text"]
+
+
 def main():
     # Capture image
     camera_capture = cv2.VideoCapture(0)
@@ -142,7 +154,8 @@ def main():
     face_cascade = cv2.CascadeClassifier(
         cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
     )
-    say_something("Finished downloading the model")
+    audio_model = whisper.load_model("base")
+    say_something("Finished downloading all models")
 
     def detect_faces(
         spot: SpotControllerWrapper, camera_capture: cv2.VideoCapture
@@ -181,7 +194,7 @@ def main():
         time.sleep(1)
 
         # Ask for help
-        question: str
+        question: str = record_audio(audio_model)
         dict_output = process_question_attempts(OBJ_CLASSES, question, num_attempts=2)
         say_something(dict_output["answer"])
 
