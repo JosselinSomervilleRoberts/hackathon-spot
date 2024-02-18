@@ -152,7 +152,7 @@ def main():
     # Use wrapper in context manager to lease control, turn on E-Stop, power on the robot and stand up at start
     # and to return lease + sit down at the end
     counter = 0
-    with SpotControllerWrapper(
+    with SpotController(
         username=SPOT_USERNAME, password=SPOT_PASSWORD, robot_ip=ROBOT_IP
     ) as spot:
         # Start
