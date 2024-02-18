@@ -109,13 +109,16 @@ def rotate_and_run_function(
     print(f"Rotate and run function")
     print(f"\t- Rotating for {n_rotations} rotations during {duration} seconds")
     print(f"\t- Going to execute function every {every_n_milliseconds} milliseconds")
-    spot.move_by_velocity_control(
-        v_x=0, v_y=0, v_rot=rotation_speed, cmd_duration=duration
-    )
     result: int = 0
     start_time = time.time()
     last_command_time_ms = start_time * 1000 - every_n_milliseconds
     while time.time() - start_time < duration:
+        spot.move_by_velocity_control(
+            v_x=0,
+            v_y=0,
+            v_rot=rotation_speed,
+            cmd_duration=every_n_milliseconds / 1000.0,
+        )
         if (time.time() * 1000 - last_command_time_ms) >= every_n_milliseconds:
             last_command_time_ms = time.time() * 1000
             result: int = function(spot, **kwargs)
@@ -123,7 +126,6 @@ def rotate_and_run_function(
                 print("\t- Function returned 1, stopping")
                 break
     print("\t- Stopping")
-    spot.move_by_velocity_control(v_x=0, v_y=0, v_rot=0, cmd_duration=0)
     print("\t- Done rotating and running function")
     return result == 1
 
