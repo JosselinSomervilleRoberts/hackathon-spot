@@ -3,6 +3,7 @@
 *.json
 *.wav
 *.mp3
+**pycache**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
